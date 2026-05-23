@@ -3,34 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>🎯 CamTracker Mobile</title>
+<title>🎯 CamTracker Pro</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { background:#000; color:#fff; font-family:'Segoe UI',sans-serif; height:100dvh; overflow:hidden; display:flex; flex-direction:column; }
-
 #video-wrap { position:relative; flex:1; overflow:hidden; }
 video { width:100%; height:100%; object-fit:cover; display:block; }
 canvas { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
-
-#hud { position:absolute; top:10px; left:10px; right:10px; display:flex; justify-content:space-between; align-items:center; z-index:10; }
-.badge { background:rgba(0,0,0,.65); backdrop-filter:blur(8px); padding:.3rem .7rem; border-radius:20px; font-size:.8rem; font-weight:700; }
-.badge.green { color:#00e676; }
-.badge.purple { color:#b39ddb; }
-
-#status { position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,.7); backdrop-filter:blur(10px); padding:.8rem 1rem; z-index:10; }
-#status h3 { font-size:.75rem; text-transform:uppercase; color:#888; letter-spacing:1px; margin-bottom:.4rem; }
-#det-list { display:flex; flex-wrap:wrap; gap:.4rem; max-height:90px; overflow-y:auto; }
-.det-chip { background:rgba(255,255,255,.12); border-radius:20px; padding:.25rem .7rem; font-size:.8rem; font-weight:600; white-space:nowrap; }
-.empty { color:#555; font-size:.85rem; }
-
+#hud { position:absolute; top:10px; left:10px; right:10px; display:flex; justify-content:space-between; z-index:10; gap:.4rem; }
+.badge { background:rgba(0,0,0,.72); backdrop-filter:blur(8px); padding:.28rem .65rem; border-radius:20px; font-size:.75rem; font-weight:700; white-space:nowrap; }
 #loading { position:absolute; inset:0; background:#000; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1rem; z-index:100; }
 #loading .icon { font-size:3.5rem; }
 #loading p { color:#888; font-size:.9rem; text-align:center; padding:0 2rem; }
-.spinner { width:36px; height:36px; border:3px solid #333; border-top-color:#8b80ff; border-radius:50%; animation:spin .8s linear infinite; }
+.spinner { width:36px; height:36px; border:3px solid #222; border-top-color:#8b80ff; border-radius:50%; animation:spin .8s linear infinite; }
 @keyframes spin { to { transform:rotate(360deg); } }
-
-#cam-btn { position:absolute; top:10px; right:10px; background:rgba(0,0,0,.65); backdrop-filter:blur(8px);
-  border:none; color:#fff; padding:.4rem .8rem; border-radius:20px; font-size:.8rem; cursor:pointer; z-index:20; }
+#panel { background:rgba(0,0,0,.88); backdrop-filter:blur(12px); padding:.65rem .9rem; border-top:1px solid #1a1a2e; flex-shrink:0; max-height:42vh; overflow-y:auto; }
+#panel h3 { font-size:.7rem; text-transform:uppercase; color:#666; letter-spacing:1px; margin-bottom:.45rem; }
+#det-list { display:flex; flex-wrap:wrap; gap:.35rem; }
+.chip { padding:.22rem .6rem; border-radius:16px; font-size:.78rem; font-weight:700; background:rgba(255,255,255,.08); white-space:nowrap; }
+.empty { color:#555; font-size:.82rem; }
+#cam-btn { position:absolute; top:10px; right:10px; background:rgba(0,0,0,.65); backdrop-filter:blur(8px); border:none; color:#fff; padding:.38rem .75rem; border-radius:18px; font-size:.78rem; cursor:pointer; z-index:20; }
 </style>
 </head>
 <body>
@@ -38,169 +30,212 @@ canvas { position:absolute; top:0; left:0; width:100%; height:100%; pointer-even
 <div id="loading">
   <div class="icon">🎯</div>
   <div class="spinner"></div>
-  <p id="load-msg">Chargement du modèle IA...</p>
+  <p id="load-msg">Chargement modèles IA...</p>
 </div>
 
 <div id="video-wrap">
   <video id="video" autoplay playsinline muted></video>
   <canvas id="canvas"></canvas>
-
   <div id="hud">
-    <span class="badge green" id="fps-badge">⚡ 0 FPS</span>
-    <span class="badge purple" id="obj-badge">0 objets</span>
+    <span class="badge" style="color:#8b80ff" id="fps-b">⚡ 0 FPS</span>
+    <span class="badge" style="color:#80ffb0" id="obj-b">0 objets</span>
+    <span class="badge" style="color:#ffa040" id="cls-b">🧠 —</span>
   </div>
-
   <button id="cam-btn" onclick="switchCam()">🔄 Cam</button>
 </div>
 
-<div id="status">
+<div id="panel">
   <h3>🔍 Détections</h3>
   <div id="det-list"><span class="empty">En attente...</span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
+
 <script>
-// Traductions FR
+// ── Traductions FR (COCO 80 classes) ─────────────────────────────────────────
 const FR = {
-  person:"personne", bicycle:"vélo", car:"voiture", motorcycle:"moto", airplane:"avion",
-  bus:"bus", train:"train", truck:"camion", boat:"bateau", "traffic light":"feu",
-  "fire hydrant":"bouche d'incendie", "stop sign":"panneau stop", bench:"banc",
-  bird:"oiseau", cat:"chat", dog:"chien", horse:"cheval", sheep:"mouton",
-  cow:"vache", elephant:"éléphant", bear:"ours", zebra:"zèbre", giraffe:"girafe",
-  backpack:"sac à dos", umbrella:"parapluie", handbag:"sac", tie:"cravate",
-  suitcase:"valise", frisbee:"frisbee", skis:"skis", snowboard:"snowboard",
-  "sports ball":"balle", kite:"cerf-volant", "baseball bat":"batte",
-  "baseball glove":"gant", skateboard:"skateboard", surfboard:"surf",
-  "tennis racket":"raquette", bottle:"bouteille", "wine glass":"verre",
-  cup:"tasse", fork:"fourchette", knife:"couteau", spoon:"cuillère",
-  bowl:"bol", banana:"banane", apple:"pomme", sandwich:"sandwich",
-  orange:"orange", broccoli:"brocoli", carrot:"carotte", "hot dog":"hot-dog",
-  pizza:"pizza", donut:"donut", cake:"gâteau", chair:"chaise",
-  couch:"canapé", "potted plant":"plante", bed:"lit", "dining table":"table",
-  toilet:"toilettes", tv:"télé", laptop:"laptop", mouse:"souris",
-  remote:"télécommande", keyboard:"clavier", "cell phone":"téléphone",
-  microwave:"micro-ondes", oven:"four", toaster:"grille-pain", sink:"évier",
-  refrigerator:"frigo", book:"livre", clock:"horloge", vase:"vase",
-  scissors:"ciseaux", "teddy bear":"nounours", "hair drier":"sèche-cheveux",
-  toothbrush:"brosse à dents", mirror:"miroir"
+  person:"personne",bicycle:"vélo",car:"voiture",motorcycle:"moto",airplane:"avion",
+  bus:"bus",train:"train",truck:"camion",boat:"bateau","traffic light":"feu tricolore",
+  "fire hydrant":"bouche incendie","stop sign":"panneau stop","parking meter":"parcmètre",
+  bench:"banc",bird:"oiseau",cat:"chat",dog:"chien",horse:"cheval",sheep:"mouton",
+  cow:"vache",elephant:"éléphant",bear:"ours",zebra:"zèbre",giraffe:"girafe",
+  backpack:"sac à dos",umbrella:"parapluie",handbag:"sac",tie:"cravate",suitcase:"valise",
+  frisbee:"frisbee",skis:"skis",snowboard:"snowboard","sports ball":"balle",kite:"cerf-volant",
+  "baseball bat":"batte","baseball glove":"gant",skateboard:"skateboard",surfboard:"surf",
+  "tennis racket":"raquette",bottle:"bouteille","wine glass":"verre vin",cup:"tasse",
+  fork:"fourchette",knife:"couteau",spoon:"cuillère",bowl:"bol",banana:"banane",
+  apple:"pomme",sandwich:"sandwich",orange:"orange",broccoli:"brocoli",carrot:"carotte",
+  "hot dog":"hot-dog",pizza:"pizza",donut:"donut",cake:"gâteau",chair:"chaise",
+  couch:"canapé","potted plant":"plante",bed:"lit","dining table":"table",
+  toilet:"toilettes",tv:"télé",laptop:"laptop",mouse:"souris",remote:"télécommande",
+  keyboard:"clavier","cell phone":"téléphone",microwave:"micro-ondes",oven:"four",
+  toaster:"grille-pain",sink:"évier",refrigerator:"frigo",book:"livre",clock:"horloge",
+  vase:"vase",scissors:"ciseaux","teddy bear":"nounours","hair drier":"sèche-cheveux",
+  toothbrush:"brosse à dents"
 };
+
+// Traduction MobileNet (mots-clés courants)
+function translateMN(raw) {
+  const t = raw.toLowerCase()
+    .replace(/,.*$/,"").replace(/_/g," ").trim();
+  const map = {
+    "golden retriever":"chien golden","labrador":"labrador","poodle":"caniche",
+    "tabby":"chat tigré","persian cat":"chat persan","siamese cat":"chat siamois",
+    "rose":"rose","sunflower":"tournesol","daisy":"marguerite","tulip":"tulipe",
+    "laptop":"laptop","notebook":"ordinateur","keyboard":"clavier","monitor":"écran",
+    "mobile phone":"téléphone","iphone":"iPhone","television":"télévision",
+    "coffee mug":"tasse café","water bottle":"bouteille","wine bottle":"bouteille vin",
+    "chair":"chaise","table":"table","sofa":"canapé","desk":"bureau",
+    "car wheel":"roue voiture","sports car":"voiture sport","ambulance":"ambulance",
+    "pizza":"pizza","hamburger":"hamburger","hot dog":"hot-dog","ice cream":"glace",
+    "banana":"banane","apple":"pomme","orange":"orange","strawberry":"fraise",
+    "book":"livre","backpack":"sac à dos","umbrella":"parapluie","sunglasses":"lunettes",
+    "bicycle":"vélo","motorcycle":"moto","scooter":"scooter",
+    "tree":"arbre","flower":"fleur","grass":"herbe","sky":"ciel",
+    "building":"bâtiment","house":"maison","bridge":"pont","street":"rue",
+    "person":"personne","face":"visage","hand":"main",
+  };
+  for (const [en,fr] of Object.entries(map)) {
+    if (t.includes(en)) return fr;
+  }
+  // Retourner le texte anglais nettoyé si pas de traduction
+  return t.split(" ").slice(0,2).join(" ");
+}
 
 const COLORS = {};
 function getColor(cls) {
   if (!COLORS[cls]) {
-    let hash = 0;
-    for (let c of cls) hash = c.charCodeAt(0) + ((hash<<5)-hash);
-    const h = Math.abs(hash) % 360;
-    COLORS[cls] = `hsl(${h},85%,60%)`;
+    let h=0; for(const c of cls) h=c.charCodeAt(0)+((h<<5)-h);
+    COLORS[cls]=`hsl(${Math.abs(h)%360},80%,62%)`;
   }
   return COLORS[cls];
 }
 
-let model, video, canvas, ctx;
+let cocoModel, mnModel;
+let video, canvas, ctx;
 let facingMode = "environment";
 let stream = null;
-let frameCount = 0, lastT = Date.now();
-let running = false;
-let lastDets = [];  // Dernières détections stables
+let lastDets = [], lastScene = "";
+let frameCount=0, lastT=Date.now();
+let running=false;
 
 async function startCam() {
   if (stream) stream.getTracks().forEach(t=>t.stop());
   stream = await navigator.mediaDevices.getUserMedia({
-    video: { facingMode, width:{ideal:640}, height:{ideal:480} },
-    audio: false
+    video:{ facingMode, width:{ideal:1280}, height:{ideal:720} }, audio:false
   });
   video.srcObject = stream;
-  await new Promise(r => video.onloadedmetadata = r);
-  canvas.width  = video.videoWidth;
-  canvas.height = video.videoHeight;
+  await new Promise(r => video.onloadedmetadata=r);
+  canvas.width=video.videoWidth; canvas.height=video.videoHeight;
 }
-
-function switchCam() {
-  facingMode = facingMode === "environment" ? "user" : "environment";
+function switchCam(){
+  facingMode = facingMode==="environment"?"user":"environment";
   startCam();
 }
 
-// Thread 1: YOLO en boucle (lent mais stable)
+// ── YOLO COCO (détection avec bbox) ──────────────────────────────────────────
 async function yoloLoop() {
   while (running) {
-    const preds = await model.detect(video);
-    const dets = [];
-    for (const p of preds) {
-      if (p.score < 0.38) continue;
-      const [x,y,w,h] = p.bbox;
-      dets.push({
-        name: FR[p.class] || p.class,
+    try {
+      const preds = await cocoModel.detect(video, 20, 0.35);
+      lastDets = preds.map(p=>({
+        name: FR[p.class]||p.class,
         cls: p.class,
         conf: Math.round(p.score*100),
-        x,y,w,h
-      });
-    }
-    lastDets = dets;  // Mise à jour atomique
-    // Liste sidebar
-    const list = document.getElementById("det-list");
-    list.innerHTML = dets.length ? dets.map(d=>
-      `<span class="det-chip" style="border:1px solid ${getColor(d.cls)}">${d.name} ${d.conf}%</span>`
-    ).join("") : `<span class="empty">Aucun objet détecté</span>`;
-    document.getElementById("obj-badge").textContent = `${dets.length} objet${dets.length!==1?'s':''}`;
+        x:p.bbox[0], y:p.bbox[1], w:p.bbox[2], h:p.bbox[3]
+      }));
+      updateList();
+    } catch(e){}
+    await new Promise(r=>setTimeout(r,100));
   }
 }
 
-// Thread 2: Rendu canvas à 60fps (toujours fluide)
+// ── MobileNet (classification scène = 1000 classes) ──────────────────────────
+async function classifyLoop() {
+  while (running) {
+    try {
+      const preds = await mnModel.classify(video, 3);
+      if (preds.length>0 && preds[0].probability>0.15) {
+        const names = preds
+          .filter(p=>p.probability>0.1)
+          .map(p=>translateMN(p.className));
+        lastScene = names.join(", ");
+        document.getElementById("cls-b").textContent = "🧠 "+names[0];
+      }
+      updateList();
+    } catch(e){}
+    await new Promise(r=>setTimeout(r,600));
+  }
+}
+
+function updateList() {
+  // Fusionner COCO + MobileNet sans doublons
+  const all = [...lastDets.map(d=>d.name)];
+  if (lastScene) {
+    lastScene.split(", ").forEach(n=>{ if(!all.includes(n)) all.push(n); });
+  }
+  document.getElementById("obj-b").textContent = `${lastDets.length} objet${lastDets.length!==1?"s":""}`;
+  const list = document.getElementById("det-list");
+  list.innerHTML = all.length ? all.map((n,i)=>{
+    const col = i<lastDets.length ? getColor(lastDets[i].cls) : "#ffa040";
+    return `<span class="chip" style="border:1px solid ${col};color:${col}">${n}</span>`;
+  }).join("") : `<span class="empty">Aucun objet</span>`;
+}
+
+// ── Rendu canvas 60fps ────────────────────────────────────────────────────────
 function renderLoop() {
   if (!running) return;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
   for (const d of lastDets) {
-    const {x,y,w,h,name,conf,cls} = d;
-    const col = getColor(cls);
-    ctx.strokeStyle = col;
-    ctx.lineWidth = 3;
-    ctx.shadowColor = col;
-    ctx.shadowBlur = 6;
-    ctx.strokeRect(x,y,w,h);
-    ctx.shadowBlur = 0;
-    const label = `${name}  ${conf}%`;
-    ctx.font = "bold 14px 'Segoe UI'";
-    const tw = ctx.measureText(label).width;
-    const ly = y > 28 ? y-6 : y+h+20;
-    ctx.fillStyle = col;
-    ctx.fillRect(x-1, ly-18, tw+14, 22);
-    ctx.fillStyle = "#000";
-    ctx.fillText(label, x+6, ly-1);
+    const {x,y,w,h,name,conf,cls}=d;
+    const col=getColor(cls);
+    ctx.strokeStyle=col; ctx.lineWidth=3;
+    ctx.shadowColor=col; ctx.shadowBlur=8;
+    ctx.strokeRect(x,y,w,h); ctx.shadowBlur=0;
+    const label=`${name}  ${conf}%`;
+    ctx.font="bold 15px 'Segoe UI'";
+    const tw=ctx.measureText(label).width;
+    const ly=y>30?y-6:y+h+20;
+    ctx.fillStyle=col;
+    ctx.fillRect(x-1,ly-19,tw+14,22);
+    ctx.fillStyle="#000";
+    ctx.fillText(label,x+6,ly-2);
   }
-  // FPS
   frameCount++;
-  const now = Date.now();
-  if (now - lastT >= 1000) {
-    document.getElementById("fps-badge").textContent = `⚡ ${Math.round(frameCount*1000/(now-lastT))} FPS`;
-    frameCount = 0; lastT = now;
+  const now=Date.now();
+  if(now-lastT>=1000){
+    document.getElementById("fps-b").textContent=`⚡ ${Math.round(frameCount*1000/(now-lastT))} FPS`;
+    frameCount=0; lastT=now;
   }
   requestAnimationFrame(renderLoop);
 }
 
-async function detect() {
-  yoloLoop();
-  requestAnimationFrame(renderLoop);
-}
-
+// ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
-  video  = document.getElementById("video");
-  canvas = document.getElementById("canvas");
-  ctx    = canvas.getContext("2d");
+  video=document.getElementById("video");
+  canvas=document.getElementById("canvas");
+  ctx=canvas.getContext("2d");
 
-  document.getElementById("load-msg").textContent = "Démarrage caméra...";
+  document.getElementById("load-msg").textContent="Démarrage caméra...";
   await startCam();
 
-  document.getElementById("load-msg").textContent = "Chargement modèle IA...";
-  model = await cocoSsd.load({ base: "lite_mobilenet_v2" });
+  document.getElementById("load-msg").textContent="Chargement YOLO (détection bbox)...";
+  cocoModel = await cocoSsd.load({base:"lite_mobilenet_v2"});
 
-  document.getElementById("loading").style.display = "none";
-  running = true;
-  requestAnimationFrame(detect);
+  document.getElementById("load-msg").textContent="Chargement MobileNet (1000 classes)...";
+  mnModel = await mobilenet.load({version:2, alpha:1.0});
+
+  document.getElementById("loading").style.display="none";
+  running=true;
+  yoloLoop();
+  classifyLoop();
+  requestAnimationFrame(renderLoop);
 }
 
-init().catch(e => {
-  document.getElementById("load-msg").textContent = "Erreur: " + e.message;
+init().catch(e=>{
+  document.getElementById("load-msg").textContent="Erreur: "+e.message;
 });
 </script>
 </body>
