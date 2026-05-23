@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>🚗 PlateTracker</title>
+<title>🎯 CamTracker Mobile</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { background:#000; color:#fff; font-family:'Segoe UI',sans-serif; height:100dvh; overflow:hidden; display:flex; flex-direction:column; }
@@ -12,146 +12,102 @@ body { background:#000; color:#fff; font-family:'Segoe UI',sans-serif; height:10
 video { width:100%; height:100%; object-fit:cover; display:block; }
 canvas { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
 
-#hud { position:absolute; top:10px; left:10px; right:10px; display:flex; justify-content:space-between; z-index:10; }
-.badge { background:rgba(0,0,0,.7); backdrop-filter:blur(8px); padding:.3rem .75rem; border-radius:20px; font-size:.8rem; font-weight:700; }
+#hud { position:absolute; top:10px; left:10px; right:10px; display:flex; justify-content:space-between; align-items:center; z-index:10; }
+.badge { background:rgba(0,0,0,.65); backdrop-filter:blur(8px); padding:.3rem .7rem; border-radius:20px; font-size:.8rem; font-weight:700; }
+.badge.green { color:#00e676; }
+.badge.purple { color:#b39ddb; }
+
+#status { position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,.7); backdrop-filter:blur(10px); padding:.8rem 1rem; z-index:10; }
+#status h3 { font-size:.75rem; text-transform:uppercase; color:#888; letter-spacing:1px; margin-bottom:.4rem; }
+#det-list { display:flex; flex-wrap:wrap; gap:.4rem; max-height:90px; overflow-y:auto; }
+.det-chip { background:rgba(255,255,255,.12); border-radius:20px; padding:.25rem .7rem; font-size:.8rem; font-weight:600; white-space:nowrap; }
+.empty { color:#555; font-size:.85rem; }
 
 #loading { position:absolute; inset:0; background:#000; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1rem; z-index:100; }
 #loading .icon { font-size:3.5rem; }
 #loading p { color:#888; font-size:.9rem; text-align:center; padding:0 2rem; }
-.spinner { width:36px; height:36px; border:3px solid #333; border-top-color:#f0c040; border-radius:50%; animation:spin .8s linear infinite; }
+.spinner { width:36px; height:36px; border:3px solid #333; border-top-color:#8b80ff; border-radius:50%; animation:spin .8s linear infinite; }
 @keyframes spin { to { transform:rotate(360deg); } }
 
-/* Panneau plaques */
-#panel { background:rgba(0,0,0,.85); backdrop-filter:blur(12px); padding:.75rem 1rem; border-top:1px solid #222; flex-shrink:0; max-height:45vh; overflow-y:auto; }
-#panel-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:.5rem; }
-#panel-header h3 { font-size:.75rem; text-transform:uppercase; color:#888; letter-spacing:1px; }
-#clear-btn { background:rgba(255,60,60,.15); border:1px solid rgba(255,60,60,.4); color:#ff6060; padding:.2rem .6rem; border-radius:12px; font-size:.72rem; cursor:pointer; }
-
-#plates-list { display:flex; flex-direction:column; gap:.4rem; }
-.plate-row { display:flex; align-items:center; gap:.75rem; padding:.5rem .75rem; background:rgba(255,255,255,.06); border-radius:8px; border-left:3px solid #f0c040; }
-.plate-num { font-size:1.1rem; font-weight:900; letter-spacing:2px; color:#f0c040; font-variant-numeric:tabular-nums; flex:1; }
-.plate-time { font-size:.7rem; color:#666; white-space:nowrap; }
-.plate-count { background:#f0c040; color:#000; padding:.1rem .4rem; border-radius:10px; font-size:.7rem; font-weight:800; }
-.empty { color:#555; font-size:.85rem; text-align:center; padding:.5rem; }
-
-#cam-btn { position:absolute; top:10px; right:10px; background:rgba(0,0,0,.65); backdrop-filter:blur(8px); border:none; color:#fff; padding:.4rem .8rem; border-radius:20px; font-size:.8rem; cursor:pointer; z-index:20; }
-
-/* Viseur central */
-.viewfinder { position:absolute; top:50%; left:50%; transform:translate(-50%,-60%); width:80%; max-width:340px; height:80px; border:2px solid rgba(240,192,64,.6); border-radius:8px; pointer-events:none; z-index:5; }
-.viewfinder::before,.viewfinder::after { content:''; position:absolute; width:20px; height:20px; border-color:#f0c040; border-style:solid; }
-.viewfinder::before { top:-2px; left:-2px; border-width:3px 0 0 3px; border-radius:4px 0 0 0; }
-.viewfinder::after  { bottom:-2px; right:-2px; border-width:0 3px 3px 0; border-radius:0 0 4px 0; }
-.vf-label { position:absolute; bottom:-22px; left:50%; transform:translateX(-50%); font-size:.7rem; color:rgba(240,192,64,.7); white-space:nowrap; }
+#cam-btn { position:absolute; top:10px; right:10px; background:rgba(0,0,0,.65); backdrop-filter:blur(8px);
+  border:none; color:#fff; padding:.4rem .8rem; border-radius:20px; font-size:.8rem; cursor:pointer; z-index:20; }
 </style>
 </head>
 <body>
 
 <div id="loading">
-  <div class="icon">🚗</div>
+  <div class="icon">🎯</div>
   <div class="spinner"></div>
-  <p id="load-msg">Chargement de Tesseract OCR...</p>
+  <p id="load-msg">Chargement du modèle IA...</p>
 </div>
 
 <div id="video-wrap">
   <video id="video" autoplay playsinline muted></video>
   <canvas id="canvas"></canvas>
-  <div class="viewfinder"><div class="vf-label">Pointe vers une plaque</div></div>
+
   <div id="hud">
-    <span class="badge" style="color:#f0c040" id="fps-badge">⚡ 0 FPS</span>
-    <span class="badge" style="color:#aaa" id="scan-badge">🔍 Scan...</span>
+    <span class="badge green" id="fps-badge">⚡ 0 FPS</span>
+    <span class="badge purple" id="obj-badge">0 objets</span>
   </div>
+
   <button id="cam-btn" onclick="switchCam()">🔄 Cam</button>
 </div>
 
-<div id="panel">
-  <div id="panel-header">
-    <h3>🚗 Plaques détectées (<span id="total">0</span>)</h3>
-    <button id="clear-btn" onclick="clearPlates()">🗑 Effacer</button>
-  </div>
-  <div id="plates-list"><p class="empty">Aucune plaque détectée</p></div>
+<div id="status">
+  <h3>🔍 Détections</h3>
+  <div id="det-list"><span class="empty">En attente...</span></div>
 </div>
 
-<!-- Tesseract.js OCR -->
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<!-- COCO-SSD pour détecter les voitures d'abord -->
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
-
 <script>
-let video, canvas, ctx, detCanvas, detCtx;
+// Traductions FR
+const FR = {
+  person:"personne", bicycle:"vélo", car:"voiture", motorcycle:"moto", airplane:"avion",
+  bus:"bus", train:"train", truck:"camion", boat:"bateau", "traffic light":"feu",
+  "fire hydrant":"bouche d'incendie", "stop sign":"panneau stop", bench:"banc",
+  bird:"oiseau", cat:"chat", dog:"chien", horse:"cheval", sheep:"mouton",
+  cow:"vache", elephant:"éléphant", bear:"ours", zebra:"zèbre", giraffe:"girafe",
+  backpack:"sac à dos", umbrella:"parapluie", handbag:"sac", tie:"cravate",
+  suitcase:"valise", frisbee:"frisbee", skis:"skis", snowboard:"snowboard",
+  "sports ball":"balle", kite:"cerf-volant", "baseball bat":"batte",
+  "baseball glove":"gant", skateboard:"skateboard", surfboard:"surf",
+  "tennis racket":"raquette", bottle:"bouteille", "wine glass":"verre",
+  cup:"tasse", fork:"fourchette", knife:"couteau", spoon:"cuillère",
+  bowl:"bol", banana:"banane", apple:"pomme", sandwich:"sandwich",
+  orange:"orange", broccoli:"brocoli", carrot:"carotte", "hot dog":"hot-dog",
+  pizza:"pizza", donut:"donut", cake:"gâteau", chair:"chaise",
+  couch:"canapé", "potted plant":"plante", bed:"lit", "dining table":"table",
+  toilet:"toilettes", tv:"télé", laptop:"laptop", mouse:"souris",
+  remote:"télécommande", keyboard:"clavier", "cell phone":"téléphone",
+  microwave:"micro-ondes", oven:"four", toaster:"grille-pain", sink:"évier",
+  refrigerator:"frigo", book:"livre", clock:"horloge", vase:"vase",
+  scissors:"ciseaux", "teddy bear":"nounours", "hair drier":"sèche-cheveux",
+  toothbrush:"brosse à dents", mirror:"miroir"
+};
+
+const COLORS = {};
+function getColor(cls) {
+  if (!COLORS[cls]) {
+    let hash = 0;
+    for (let c of cls) hash = c.charCodeAt(0) + ((hash<<5)-hash);
+    const h = Math.abs(hash) % 360;
+    COLORS[cls] = `hsl(${h},85%,60%)`;
+  }
+  return COLORS[cls];
+}
+
+let model, video, canvas, ctx;
 let facingMode = "environment";
 let stream = null;
-let cocoModel = null;
-let worker = null;
-let running = false;
-let scanning = false;
 let frameCount = 0, lastT = Date.now();
-const plates = {}; // {plate: {time, count}}
-
-// Regex plaques (FR, EU, générique)
-const PLATE_REGEX = /^[A-Z]{2}[-\s]?\d{3}[-\s]?[A-Z]{2}$|^[A-Z0-9]{2,4}[-\s]?[A-Z0-9]{2,4}[-\s]?[A-Z0-9]{2,4}$/;
-
-function cleanPlateText(raw) {
-  return raw.toUpperCase()
-    .replace(/[^A-Z0-9\- ]/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/O/g, "0")  // Confusion O/0 courante
-    .substring(0, 10);
-}
-
-function isValidPlate(text) {
-  if (text.length < 4 || text.length > 10) return false;
-  if (/^(.)\1+$/.test(text.replace(/[-\s]/g,""))) return false; // Tous mêmes caractères
-  const alphanum = text.replace(/[-\s]/g,"");
-  if (!/[A-Z]/.test(alphanum)) return false;
-  if (!/[0-9]/.test(alphanum)) return false;
-  return true;
-}
-
-function addPlate(text) {
-  const key = text.replace(/[-\s]/g,"");
-  const now = new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
-  if (plates[key]) {
-    plates[key].count++;
-    plates[key].lastSeen = now;
-  } else {
-    plates[key] = { display: text, time: now, lastSeen: now, count: 1 };
-  }
-  renderPlates();
-}
-
-function renderPlates() {
-  const sorted = Object.entries(plates).sort((a,b) => b[1].count - a[1].count);
-  document.getElementById("total").textContent = sorted.length;
-  const list = document.getElementById("plates-list");
-  if (sorted.length === 0) {
-    list.innerHTML = '<p class="empty">Aucune plaque détectée</p>';
-    return;
-  }
-  list.innerHTML = sorted.map(([key,p]) => `
-    <div class="plate-row">
-      <span class="plate-num">${p.display}</span>
-      <span class="plate-count">×${p.count}</span>
-      <span class="plate-time">${p.lastSeen}</span>
-    </div>
-  `).join("");
-}
-
-function clearPlates() {
-  Object.keys(plates).forEach(k => delete plates[k]);
-  renderPlates();
-}
+let running = false;
+let lastDets = [];  // Dernières détections stables
 
 async function startCam() {
-  if (stream) stream.getTracks().forEach(t => t.stop());
+  if (stream) stream.getTracks().forEach(t=>t.stop());
   stream = await navigator.mediaDevices.getUserMedia({
-    video: {
-      facingMode,
-      width: { ideal: 1280 },
-      height: { ideal: 720 },
-      focusMode: "continuous"
-    },
+    video: { facingMode, width:{ideal:640}, height:{ideal:480} },
     audio: false
   });
   video.srcObject = stream;
@@ -165,114 +121,66 @@ function switchCam() {
   startCam();
 }
 
-// Extraire zone de la plaque depuis le canvas
-function extractPlateRegion(x, y, w, h) {
-  const pad = 0.15;
-  const px = Math.max(0, x - w*pad);
-  const py = Math.max(0, y - h*pad);
-  const pw = Math.min(canvas.width - px,  w*(1+2*pad));
-  const ph = Math.min(canvas.height - py, h*(1+2*pad));
-  const tmp = document.createElement("canvas");
-  tmp.width = pw * 3; tmp.height = ph * 3; // Upscale pour OCR
-  const tc = tmp.getContext("2d");
-  // Prétraitement: contraste élevé
-  tc.filter = "contrast(2) grayscale(1) brightness(1.1)";
-  tc.drawImage(canvas, px, py, pw, ph, 0, 0, tmp.width, tmp.height);
-  return tmp;
-}
-
-async function scanFrame() {
-  if (scanning || !running) return;
-  scanning = true;
-  document.getElementById("scan-badge").textContent = "🔍 Analyse...";
-
-  try {
-    // 1. Dessiner la frame dans le canvas
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    // 2. Détecter voitures/motos avec COCO-SSD
-    const preds = await cocoModel.detect(video);
-    const vehicles = preds.filter(p => ["car","truck","motorcycle","bus"].includes(p.class) && p.score > 0.5);
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    if (vehicles.length > 0) {
-      for (const v of vehicles) {
-        const [vx, vy, vw, vh] = v.bbox;
-        // Encadrer le véhicule en bleu discret
-        ctx.strokeStyle = "rgba(100,150,255,0.5)";
-        ctx.lineWidth = 1;
-        ctx.strokeRect(vx, vy, vw, vh);
-
-        // Zone plaque = bas du véhicule
-        const px = vx + vw*0.1;
-        const py = vy + vh*0.65;
-        const pw = vw*0.8;
-        const ph = vh*0.3;
-
-        // Highlight zone plaque
-        ctx.strokeStyle = "#f0c040";
-        ctx.lineWidth = 2;
-        ctx.shadowColor = "#f0c040";
-        ctx.shadowBlur = 6;
-        ctx.strokeRect(px, py, pw, ph);
-        ctx.shadowBlur = 0;
-
-        // OCR sur la zone plaque
-        const plateImg = extractPlateRegion(px, py, pw, ph);
-        const result = await worker.recognize(plateImg);
-        const raw = result.data.text;
-        const lines = raw.split("\n").map(l => cleanPlateText(l)).filter(l => l.length > 2);
-
-        for (const line of lines) {
-          if (isValidPlate(line)) {
-            addPlate(line);
-            // Afficher sur canvas
-            ctx.fillStyle = "#f0c040";
-            ctx.font = "bold 16px monospace";
-            const tw = ctx.measureText(line).width;
-            ctx.fillRect(px-2, py-22, tw+16, 20);
-            ctx.fillStyle = "#000";
-            ctx.fillText(line, px+6, py-6);
-          }
-        }
-      }
-    } else {
-      // Pas de véhicule détecté: OCR sur le centre de l'image (zone viseur)
-      const cx = canvas.width*0.1;
-      const cy = canvas.height*0.35;
-      const cw = canvas.width*0.8;
-      const ch = canvas.height*0.25;
-      const plateImg = extractPlateRegion(cx, cy, cw, ch);
-      const result = await worker.recognize(plateImg);
-      const lines = result.data.text.split("\n").map(l => cleanPlateText(l)).filter(l => l.length > 2);
-      for (const line of lines) {
-        if (isValidPlate(line)) addPlate(line);
-      }
-    }
-
-    // FPS
-    frameCount++;
-    const now = Date.now();
-    if (now - lastT >= 1000) {
-      document.getElementById("fps-badge").textContent = `⚡ ${Math.round(frameCount*1000/(now-lastT))} FPS`;
-      frameCount = 0; lastT = now;
-    }
-
-  } catch(e) {
-    console.error(e);
-  }
-
-  document.getElementById("scan-badge").textContent = `🚗 ${Object.keys(plates).length} plaque(s)`;
-  scanning = false;
-}
-
-async function loop() {
+// Thread 1: YOLO en boucle (lent mais stable)
+async function yoloLoop() {
   while (running) {
-    await scanFrame();
-    await new Promise(r => setTimeout(r, 800)); // 1-2 scans/sec (OCR est lent)
+    const preds = await model.detect(video);
+    const dets = [];
+    for (const p of preds) {
+      if (p.score < 0.38) continue;
+      const [x,y,w,h] = p.bbox;
+      dets.push({
+        name: FR[p.class] || p.class,
+        cls: p.class,
+        conf: Math.round(p.score*100),
+        x,y,w,h
+      });
+    }
+    lastDets = dets;  // Mise à jour atomique
+    // Liste sidebar
+    const list = document.getElementById("det-list");
+    list.innerHTML = dets.length ? dets.map(d=>
+      `<span class="det-chip" style="border:1px solid ${getColor(d.cls)}">${d.name} ${d.conf}%</span>`
+    ).join("") : `<span class="empty">Aucun objet détecté</span>`;
+    document.getElementById("obj-badge").textContent = `${dets.length} objet${dets.length!==1?'s':''}`;
   }
+}
+
+// Thread 2: Rendu canvas à 60fps (toujours fluide)
+function renderLoop() {
+  if (!running) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (const d of lastDets) {
+    const {x,y,w,h,name,conf,cls} = d;
+    const col = getColor(cls);
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 3;
+    ctx.shadowColor = col;
+    ctx.shadowBlur = 6;
+    ctx.strokeRect(x,y,w,h);
+    ctx.shadowBlur = 0;
+    const label = `${name}  ${conf}%`;
+    ctx.font = "bold 14px 'Segoe UI'";
+    const tw = ctx.measureText(label).width;
+    const ly = y > 28 ? y-6 : y+h+20;
+    ctx.fillStyle = col;
+    ctx.fillRect(x-1, ly-18, tw+14, 22);
+    ctx.fillStyle = "#000";
+    ctx.fillText(label, x+6, ly-1);
+  }
+  // FPS
+  frameCount++;
+  const now = Date.now();
+  if (now - lastT >= 1000) {
+    document.getElementById("fps-badge").textContent = `⚡ ${Math.round(frameCount*1000/(now-lastT))} FPS`;
+    frameCount = 0; lastT = now;
+  }
+  requestAnimationFrame(renderLoop);
+}
+
+async function detect() {
+  yoloLoop();
+  requestAnimationFrame(renderLoop);
 }
 
 async function init() {
@@ -283,28 +191,16 @@ async function init() {
   document.getElementById("load-msg").textContent = "Démarrage caméra...";
   await startCam();
 
-  document.getElementById("load-msg").textContent = "Chargement modèle voitures...";
-  cocoModel = await cocoSsd.load({ base: "lite_mobilenet_v2" });
-
-  document.getElementById("load-msg").textContent = "Chargement OCR (Tesseract)...";
-  worker = await Tesseract.createWorker("eng", 1, {
-    logger: m => {
-      if (m.status === "loading tesseract core") document.getElementById("load-msg").textContent = "Chargement OCR...";
-    }
-  });
-  await worker.setParameters({
-    tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789- ",
-    tessedit_pageseg_mode: "8",
-  });
+  document.getElementById("load-msg").textContent = "Chargement modèle IA...";
+  model = await cocoSsd.load({ base: "lite_mobilenet_v2" });
 
   document.getElementById("loading").style.display = "none";
   running = true;
-  loop();
+  requestAnimationFrame(detect);
 }
 
 init().catch(e => {
   document.getElementById("load-msg").textContent = "Erreur: " + e.message;
-  console.error(e);
 });
 </script>
 </body>
