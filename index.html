@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>🎯 CamTracker Mobile</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#000; color:#fff; font-family:'Segoe UI',sans-serif; height:100dvh; overflow:hidden; display:flex; flex-direction:column; }
+
+#video-wrap { position:relative; flex:1; overflow:hidden; }
+video { width:100%; height:100%; object-fit:cover; display:block; }
+canvas { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
+
+#hud { position:absolute; top:10px; left:10px; right:10px; display:flex; justify-content:space-between; align-items:center; z-index:10; }
+.badge { background:rgba(0,0,0,.65); backdrop-filter:blur(8px); padding:.3rem .7rem; border-radius:20px; font-size:.8rem; font-weight:700; }
+.badge.green { color:#00e676; }
+.badge.purple { color:#b39ddb; }
+
+#status { position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,.7); backdrop-filter:blur(10px); padding:.8rem 1rem; z-index:10; }
+#status h3 { font-size:.75rem; text-transform:uppercase; color:#888; letter-spacing:1px; margin-bottom:.4rem; }
+#det-list { display:flex; flex-wrap:wrap; gap:.4rem; max-height:90px; overflow-y:auto; }
+.det-chip { background:rgba(255,255,255,.12); border-radius:20px; padding:.25rem .7rem; font-size:.8rem; font-weight:600; white-space:nowrap; }
+.empty { color:#555; font-size:.85rem; }
+
+#loading { position:absolute; inset:0; background:#000; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1rem; z-index:100; }
+#loading .icon { font-size:3.5rem; }
+#loading p { color:#888; font-size:.9rem; text-align:center; padding:0 2rem; }
+.spinner { width:36px; height:36px; border:3px solid #333; border-top-color:#8b80ff; border-radius:50%; animation:spin .8s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+#cam-btn { position:absolute; top:10px; right:10px; background:rgba(0,0,0,.65); backdrop-filter:blur(8px);
+  border:none; color:#fff; padding:.4rem .8rem; border-radius:20px; font-size:.8rem; cursor:pointer; z-index:20; }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="icon">🎯</div>
+  <div class="spinner"></div>
+  <p id="load-msg">Chargement du modèle IA...</p>
+</div>
+
+<div id="video-wrap">
+  <video id="video" autoplay playsinline muted></video>
+  <canvas id="canvas"></canvas>
+
+  <div id="hud">
+    <span class="badge green" id="fps-badge">⚡ 0 FPS</span>
+    <span class="badge purple" id="obj-badge">0 objets</span>
+  </div>
+
+  <button id="cam-btn" onclick="switchCam()">🔄 Cam</button>
+</div>
+
+<div id="status">
+  <h3>🔍 Détections</h3>
+  <div id="det-list"><span class="empty">En attente...</span></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+<script>
+// Traductions FR
+const FR = {
+  person:"personne", bicycle:"vélo", car:"voiture", motorcycle:"moto", airplane:"avion",
+  bus:"bus", train:"train", truck:"camion", boat:"bateau", "traffic light":"feu",
+  "fire hydrant":"bouche d'incendie", "stop sign":"panneau stop", bench:"banc",
+  bird:"oiseau", cat:"chat", dog:"chien", horse:"cheval", sheep:"mouton",
+  cow:"vache", elephant:"éléphant", bear:"ours", zebra:"zèbre", giraffe:"girafe",
+  backpack:"sac à dos", umbrella:"parapluie", handbag:"sac", tie:"cravate",
+  suitcase:"valise", frisbee:"frisbee", skis:"skis", snowboard:"snowboard",
+  "sports ball":"balle", kite:"cerf-volant", "baseball bat":"batte",
+  "baseball glove":"gant", skateboard:"skateboard", surfboard:"surf",
+  "tennis racket":"raquette", bottle:"bouteille", "wine glass":"verre",
+  cup:"tasse", fork:"fourchette", knife:"couteau", spoon:"cuillère",
+  bowl:"bol", banana:"banane", apple:"pomme", sandwich:"sandwich",
+  orange:"orange", broccoli:"brocoli", carrot:"carotte", "hot dog":"hot-dog",
+  pizza:"pizza", donut:"donut", cake:"gâteau", chair:"chaise",
+  couch:"canapé", "potted plant":"plante", bed:"lit", "dining table":"table",
+  toilet:"toilettes", tv:"télé", laptop:"laptop", mouse:"souris",
+  remote:"télécommande", keyboard:"clavier", "cell phone":"téléphone",
+  microwave:"micro-ondes", oven:"four", toaster:"grille-pain", sink:"évier",
+  refrigerator:"frigo", book:"livre", clock:"horloge", vase:"vase",
+  scissors:"ciseaux", "teddy bear":"nounours", "hair drier":"sèche-cheveux",
+  toothbrush:"brosse à dents", mirror:"miroir"
+};
+
+const COLORS = {};
+function getColor(cls) {
+  if (!COLORS[cls]) {
+    let hash = 0;
+    for (let c of cls) hash = c.charCodeAt(0) + ((hash<<5)-hash);
+    const h = Math.abs(hash) % 360;
+    COLORS[cls] = `hsl(${h},85%,60%)`;
+  }
+  return COLORS[cls];
+}
+
+let model, video, canvas, ctx;
+let facingMode = "environment"; // caméra arrière par défaut
+let stream = null;
+let frameCount = 0, lastT = Date.now();
+let running = false;
+
+async function startCam() {
+  if (stream) stream.getTracks().forEach(t=>t.stop());
+  stream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode, width:{ideal:640}, height:{ideal:480} },
+    audio: false
+  });
+  video.srcObject = stream;
+  await new Promise(r => video.onloadedmetadata = r);
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+}
+
+function switchCam() {
+  facingMode = facingMode === "environment" ? "user" : "environment";
+  startCam();
+}
+
+async function detect() {
+  if (!running) return;
+  const preds = await model.detect(video);
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const dets = [];
+
+  for (const p of preds) {
+    if (p.score < 0.4) continue;
+    const [x,y,w,h] = p.bbox;
+    const name = FR[p.class] || p.class;
+    const col  = getColor(p.class);
+    const conf = Math.round(p.score*100);
+
+    // Rectangle
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 3;
+    ctx.shadowColor = col;
+    ctx.shadowBlur = 8;
+    ctx.strokeRect(x,y,w,h);
+    ctx.shadowBlur = 0;
+
+    // Label
+    const label = `${name}  ${conf}%`;
+    ctx.font = "bold 14px 'Segoe UI'";
+    const tw = ctx.measureText(label).width;
+    const ly = y > 28 ? y-6 : y+h+20;
+    ctx.fillStyle = col;
+    ctx.fillRect(x-1, ly-18, tw+14, 22);
+    ctx.fillStyle = "#000";
+    ctx.fillText(label, x+6, ly-1);
+
+    dets.push({name, conf, cls:p.class});
+  }
+
+  // FPS
+  frameCount++;
+  const now = Date.now();
+  if (now - lastT >= 1000) {
+    const fps = Math.round(frameCount*1000/(now-lastT));
+    document.getElementById("fps-badge").textContent = `⚡ ${fps} FPS`;
+    frameCount = 0; lastT = now;
+  }
+  document.getElementById("obj-badge").textContent = `${dets.length} objet${dets.length!==1?'s':''}`;
+
+  // Liste
+  const list = document.getElementById("det-list");
+  if (dets.length) {
+    list.innerHTML = dets.map(d=>
+      `<span class="det-chip" style="border:1px solid ${getColor(d.cls)}">${d.name} ${d.conf}%</span>`
+    ).join("");
+  } else {
+    list.innerHTML = `<span class="empty">Aucun objet détecté</span>`;
+  }
+
+  requestAnimationFrame(detect);
+}
+
+async function init() {
+  video  = document.getElementById("video");
+  canvas = document.getElementById("canvas");
+  ctx    = canvas.getContext("2d");
+
+  document.getElementById("load-msg").textContent = "Démarrage caméra...";
+  await startCam();
+
+  document.getElementById("load-msg").textContent = "Chargement modèle IA...";
+  model = await cocoSsd.load({ base: "lite_mobilenet_v2" });
+
+  document.getElementById("loading").style.display = "none";
+  running = true;
+  requestAnimationFrame(detect);
+}
+
+init().catch(e => {
+  document.getElementById("load-msg").textContent = "Erreur: " + e.message;
+});
+</script>
+</body>
+</html>
