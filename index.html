@@ -7,39 +7,46 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#000;color:#fff;font-family:'Segoe UI',sans-serif;height:100dvh;overflow:hidden;display:flex;flex-direction:column}
-#vw{position:relative;flex:1;overflow:hidden}
+#vw{position:relative;flex:1;overflow:hidden;min-height:0}
 video{width:100%;height:100%;object-fit:cover;display:block}
 canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
-/* HUD */
-#hud{position:absolute;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;z-index:10;gap:.4rem;flex-wrap:wrap}
+#hud{position:absolute;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;z-index:10;gap:.4rem}
 .badge{background:rgba(0,0,0,.75);backdrop-filter:blur(8px);padding:.28rem .65rem;border-radius:20px;font-size:.75rem;font-weight:700;white-space:nowrap}
-/* Bouton caméra */
-#cam-btn{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);border:1px solid #333;color:#fff;padding:.38rem .75rem;border-radius:18px;font-size:.78rem;cursor:pointer;z-index:20}
-/* Sélecteur de mode */
-#mode-bar{display:flex;overflow-x:auto;gap:.45rem;padding:.6rem .8rem;background:rgba(0,0,0,.9);backdrop-filter:blur(12px);border-top:1px solid #1a1a2e;flex-shrink:0;scrollbar-width:none}
+#cam-btn{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid #333;color:#fff;padding:.38rem .75rem;border-radius:18px;font-size:.78rem;cursor:pointer;z-index:20}
+#mode-bar{display:flex;overflow-x:auto;gap:.4rem;padding:.55rem .7rem;background:rgba(0,0,0,.92);border-top:1px solid #1a1a2e;flex-shrink:0;scrollbar-width:none}
 #mode-bar::-webkit-scrollbar{display:none}
-.mode-btn{background:rgba(255,255,255,.07);border:1px solid #2a2a3a;color:#aaa;padding:.4rem .9rem;border-radius:20px;font-size:.8rem;font-weight:600;cursor:pointer;white-space:nowrap;transition:.15s;flex-shrink:0}
+.mode-btn{background:rgba(255,255,255,.07);border:1px solid #2a2a3a;color:#aaa;padding:.38rem .85rem;border-radius:20px;font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap;transition:.15s;flex-shrink:0;-webkit-tap-highlight-color:transparent}
 .mode-btn.active{background:linear-gradient(135deg,#6c63ff,#a855f7);border-color:transparent;color:#fff}
-/* Panel bas */
-#panel{background:rgba(0,0,0,.88);backdrop-filter:blur(12px);padding:.6rem .9rem;border-top:1px solid #1a1a2e;flex-shrink:0;max-height:38vh;overflow-y:auto}
-#panel h3{font-size:.7rem;text-transform:uppercase;color:#666;letter-spacing:1px;margin-bottom:.4rem}
+#panel{background:rgba(0,0,0,.9);padding:.55rem .8rem;border-top:1px solid #1a1a2e;flex-shrink:0;max-height:30vh;overflow-y:auto}
+#panel h3{font-size:.68rem;text-transform:uppercase;color:#555;letter-spacing:1px;margin-bottom:.35rem}
 #det-list{display:flex;flex-wrap:wrap;gap:.3rem}
-.chip{padding:.22rem .6rem;border-radius:16px;font-size:.78rem;font-weight:700;white-space:nowrap}
-.empty{color:#555;font-size:.82rem}
-/* Loading */
+.chip{padding:.2rem .55rem;border-radius:14px;font-size:.75rem;font-weight:700;white-space:nowrap}
+.empty{color:#555;font-size:.8rem}
 #loading{position:absolute;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;z-index:100}
-#loading .icon{font-size:3.5rem}
-#loading p{color:#888;font-size:.9rem;text-align:center;padding:0 2rem}
 .spinner{width:36px;height:36px;border:3px solid #222;border-top-color:#8b80ff;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-/* Vitesse */
-.speed-tag{position:absolute;background:rgba(0,0,0,.8);padding:.2rem .5rem;border-radius:8px;font-size:.75rem;font-weight:800;color:#00e676;pointer-events:none}
+/* Modal reconnaissance faciale */
+#face-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:200;flex-direction:column;align-items:center;justify-content:center;gap:1rem;padding:1.5rem}
+#face-modal.open{display:flex}
+#face-modal h2{font-size:1.1rem;font-weight:800}
+#face-modal p{font-size:.85rem;color:#888;text-align:center}
+.face-input-row{display:flex;gap:.7rem;align-items:center;width:100%;max-width:340px}
+#face-name-input{flex:1;background:#1a1a26;border:1px solid #333;color:#fff;padding:.6rem .9rem;border-radius:8px;font-size:.9rem}
+#face-preview{width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid #6c63ff;display:none}
+.btn-add{background:linear-gradient(135deg,#6c63ff,#a855f7);border:none;color:#fff;padding:.55rem 1.2rem;border-radius:10px;font-size:.85rem;font-weight:700;cursor:pointer}
+.btn-cancel{background:rgba(255,255,255,.08);border:1px solid #333;color:#aaa;padding:.55rem 1rem;border-radius:10px;font-size:.85rem;cursor:pointer}
+#persons-list{width:100%;max-width:340px;max-height:200px;overflow-y:auto}
+.person-row{display:flex;align-items:center;gap:.7rem;padding:.5rem;background:#1a1a26;border-radius:8px;margin:.25rem 0}
+.person-avatar{width:44px;height:44px;border-radius:50%;object-fit:cover}
+.person-name{font-weight:700;flex:1;font-size:.9rem}
+.person-del{background:rgba(255,60,60,.15);border:1px solid rgba(255,60,60,.3);color:#ff6060;padding:.2rem .5rem;border-radius:8px;font-size:.72rem;cursor:pointer}
+#add-face-trigger{position:absolute;bottom:10px;right:10px;background:rgba(108,99,255,.8);border:none;color:#fff;padding:.4rem .85rem;border-radius:18px;font-size:.78rem;cursor:pointer;z-index:20;display:none}
 </style>
 </head>
 <body>
 
 <div id="loading">
-  <div class="icon">🎯</div>
+  <div style="font-size:3rem">🎯</div>
   <div class="spinner"></div>
   <p id="load-msg">Chargement modèles...</p>
 </div>
@@ -52,14 +59,15 @@ canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none
     <span class="badge" style="color:#80ffb0" id="info-b">—</span>
   </div>
   <button id="cam-btn" onclick="switchCam()">🔄</button>
+  <button id="add-face-trigger" onclick="openFaceModal()">➕ Ajouter visage</button>
 </div>
 
 <div id="mode-bar">
-  <button class="mode-btn active" onclick="setMode('objects')"   id="btn-objects">🎯 Objets</button>
-  <button class="mode-btn"        onclick="setMode('speed')"    id="btn-speed">⚡ Vitesse</button>
-  <button class="mode-btn"        onclick="setMode('pose')"     id="btn-pose">🦴 Squelette</button>
-  <button class="mode-btn"        onclick="setMode('face')"     id="btn-face">😊 Visage</button>
-  <button class="mode-btn"        onclick="setMode('hands')"    id="btn-hands">🖐️ Mains</button>
+  <button class="mode-btn active" onclick="setMode('objects')"  id="btn-objects">🎯 Objets</button>
+  <button class="mode-btn"        onclick="setMode('speed')"   id="btn-speed">⚡ Vitesse</button>
+  <button class="mode-btn"        onclick="setMode('pose')"    id="btn-pose">🦴 Corps</button>
+  <button class="mode-btn"        onclick="setMode('face')"    id="btn-face">😊 Visage</button>
+  <button class="mode-btn"        onclick="setMode('hands')"   id="btn-hands">🖐️ Mains</button>
 </div>
 
 <div id="panel">
@@ -67,42 +75,62 @@ canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none
   <div id="det-list"><span class="empty">En attente...</span></div>
 </div>
 
-<!-- TF.js core -->
+<!-- Modal ajout visage -->
+<div id="face-modal">
+  <h2>👤 Ajouter un visage</h2>
+  <p>Prends une photo ou charge une image de la personne</p>
+  <div class="face-input-row">
+    <input type="text" id="face-name-input" placeholder="Nom de la personne" maxlength="30">
+    <label style="background:#1a1a26;border:1px solid #333;padding:.55rem .8rem;border-radius:8px;cursor:pointer;font-size:.85rem">
+      📷 Photo <input type="file" id="face-file" accept="image/*" style="display:none" onchange="previewFace(event)">
+    </label>
+  </div>
+  <img id="face-preview" alt="preview">
+  <div id="persons-list"></div>
+  <div style="display:flex;gap:.7rem;width:100%;max-width:340px">
+    <button class="btn-cancel" onclick="closeFaceModal()" style="flex:1">Fermer</button>
+    <button class="btn-add" onclick="saveFace()" style="flex:1">✅ Ajouter</button>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
-<!-- COCO-SSD -->
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
-<!-- MobileNet -->
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
-<!-- MoveNet (pose + vitesse) -->
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
-<!-- HandPose -->
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose-detection@2.0.1/dist/hand-pose-detection.min.js"></script>
-<!-- FaceMesh -->
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection@1.0.6/dist/face-landmarks-detection.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/face-api.js/dist/face-api.min.js"></script>
 
 <script>
 // ── Traductions ───────────────────────────────────────────────────────────────
-const FR={person:"personne",bicycle:"vélo",car:"voiture",motorcycle:"moto",airplane:"avion",bus:"bus",train:"train",truck:"camion",boat:"bateau","traffic light":"feu",bench:"banc",bird:"oiseau",cat:"chat",dog:"chien",horse:"cheval",sheep:"mouton",cow:"vache",elephant:"éléphant",bear:"ours",zebra:"zèbre",giraffe:"girafe",backpack:"sac à dos",umbrella:"parapluie",handbag:"sac",suitcase:"valise",bottle:"bouteille","wine glass":"verre",cup:"tasse",fork:"fourchette",knife:"couteau",spoon:"cuillère",bowl:"bol",banana:"banane",apple:"pomme",sandwich:"sandwich",orange:"orange",pizza:"pizza",donut:"donut",cake:"gâteau",chair:"chaise",couch:"canapé","potted plant":"plante",bed:"lit","dining table":"table",toilet:"toilettes",tv:"télé",laptop:"laptop",mouse:"souris",remote:"télécommande",keyboard:"clavier","cell phone":"téléphone",microwave:"micro-ondes",oven:"four",sink:"évier",refrigerator:"frigo",book:"livre",clock:"horloge",vase:"vase",scissors:"ciseaux","teddy bear":"nounours","hair drier":"sèche-cheveux",toothbrush:"brosse à dents"};
+const FR={person:"personne",bicycle:"vélo",car:"voiture",motorcycle:"moto",airplane:"avion",bus:"bus",train:"train",truck:"camion",boat:"bateau","traffic light":"feu",bench:"banc",bird:"oiseau",cat:"chat",dog:"chien",horse:"cheval",sheep:"mouton",cow:"vache",elephant:"éléphant",bear:"ours",zebra:"zèbre",giraffe:"girafe",backpack:"sac à dos",umbrella:"parapluie",handbag:"sac",suitcase:"valise",bottle:"bouteille","wine glass":"verre",cup:"tasse",fork:"fourchette",knife:"couteau",spoon:"cuillère",bowl:"bol",banana:"banane",apple:"pomme",pizza:"pizza",donut:"donut",cake:"gâteau",chair:"chaise",couch:"canapé","potted plant":"plante",bed:"lit","dining table":"table",toilet:"toilettes",tv:"télé",laptop:"laptop",mouse:"souris",remote:"télécommande",keyboard:"clavier","cell phone":"téléphone",microwave:"micro-ondes",oven:"four",sink:"évier",refrigerator:"frigo",book:"livre",clock:"horloge",vase:"vase",scissors:"ciseaux","teddy bear":"nounours"};
 
 const COLORS={};
-function getColor(k){if(!COLORS[k]){let h=0;for(const c of k)h=c.charCodeAt(0)+((h<<5)-h);COLORS[k]=`hsl(${Math.abs(h)%360},80%,62%)`;}return COLORS[k];}
+function getColor(k){if(!COLORS[k]){let h=0;for(const c of k)h=c.charCodeAt(0)+((h<<5)-h);COLORS[k]=`hsl(${Math.abs(h)%360},85%,62%)`;}return COLORS[k];}
 
-// ── État global ───────────────────────────────────────────────────────────────
+// ── État ──────────────────────────────────────────────────────────────────────
 let video,canvas,ctx,facingMode="environment",stream=null,running=false;
 let currentMode="objects";
-let models={coco:null,mn:null,pose:null,hand:null,face:null};
-let lastDets=[],lastScene="",lastPoses=[],lastHands=[],lastFaces=[];
+let models={coco:null,mn:null,pose:null,hand:null,face:null,faceapi:false};
+let lastDets=[],lastScene="",lastPoses=[],lastHands=[],lastFaceMesh=[];
+let lastFaceRec=[];
 let frameCount=0,lastT=Date.now();
 
-// Vitesse: positions précédentes des keypoints
-const prevPositions={};
-const PIXELS_PER_METER=200; // calibration approx (peut varier)
-const speeds={};
+// Vitesse
+const prevPos={};const speeds={};
+const PX_PER_M=180;
+
+// Base de données visages
+let knownFaces=[]; // [{name, descriptor, imgUrl}]
 
 // ── Caméra ────────────────────────────────────────────────────────────────────
 async function startCam(){
   if(stream)stream.getTracks().forEach(t=>t.stop());
-  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode,width:{ideal:1280},height:{ideal:720}},audio:false});
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode,width:{ideal:1280},height:{ideal:720}},audio:false});
+  }catch(e){
+    stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
+  }
   video.srcObject=stream;
   await new Promise(r=>video.onloadedmetadata=r);
   canvas.width=video.videoWidth;canvas.height=video.videoHeight;
@@ -114,9 +142,56 @@ function setMode(m){
   currentMode=m;
   document.querySelectorAll(".mode-btn").forEach(b=>b.classList.remove("active"));
   document.getElementById("btn-"+m).classList.add("active");
-  lastDets=[];lastPoses=[];lastHands=[];lastFaces=[];lastScene="";
+  lastDets=[];lastPoses=[];lastHands=[];lastFaceMesh=[];lastFaceRec=[];lastScene="";
   ctx.clearRect(0,0,canvas.width,canvas.height);
+  document.getElementById("add-face-trigger").style.display=m==="face"?"block":"none";
   updatePanel([]);
+}
+
+// ── Modal visage ──────────────────────────────────────────────────────────────
+let pendingFaceImg=null;
+function openFaceModal(){document.getElementById("face-modal").classList.add("open");renderPersonsList();}
+function closeFaceModal(){document.getElementById("face-modal").classList.remove("open");}
+function previewFace(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    pendingFaceImg=ev.target.result;
+    const prev=document.getElementById("face-preview");
+    prev.src=ev.target.result;prev.style.display="block";
+  };
+  reader.readAsDataURL(file);
+}
+async function saveFace(){
+  const name=document.getElementById("face-name-input").value.trim();
+  if(!name||!pendingFaceImg){alert("Nom et photo requis");return;}
+  const img=new Image();img.src=pendingFaceImg;
+  await new Promise(r=>img.onload=r);
+  try{
+    const det=await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
+    if(!det){alert("Aucun visage détecté dans la photo");return;}
+    knownFaces.push({name,descriptor:det.descriptor,imgUrl:pendingFaceImg});
+    saveKnownFaces();
+    pendingFaceImg=null;
+    document.getElementById("face-preview").style.display="none";
+    document.getElementById("face-name-input").value="";
+    document.getElementById("face-file").value="";
+    renderPersonsList();
+    alert(`✅ ${name} ajouté(e) !`);
+  }catch(e){alert("Erreur: "+e.message);}
+}
+function deleteFace(i){knownFaces.splice(i,1);saveKnownFaces();renderPersonsList();}
+function saveKnownFaces(){try{localStorage.setItem("camtracker_faces",JSON.stringify(knownFaces.map(f=>({...f,descriptor:Array.from(f.descriptor)}))));}catch(e){}}
+function loadKnownFaces(){try{const d=JSON.parse(localStorage.getItem("camtracker_faces")||"[]");knownFaces=d.map(f=>({...f,descriptor:new Float32Array(f.descriptor)}));}catch(e){}}
+function renderPersonsList(){
+  const list=document.getElementById("persons-list");
+  if(!knownFaces.length){list.innerHTML='<p class="empty" style="padding:.5rem">Aucune personne ajoutée</p>';return;}
+  list.innerHTML=knownFaces.map((f,i)=>`
+    <div class="person-row">
+      <img class="person-avatar" src="${f.imgUrl}" alt="${f.name}">
+      <span class="person-name">${f.name}</span>
+      <button class="person-del" onclick="deleteFace(${i})">🗑</button>
+    </div>`).join("");
 }
 
 // ── Boucles IA ────────────────────────────────────────────────────────────────
@@ -130,10 +205,7 @@ async function aiLoop(){
         }
         if(models.mn){
           const mn=await models.mn.classify(video,3);
-          lastScene=mn.filter(p=>p.probability>0.12).map(p=>{
-            const t=p.className.replace(/,.*$/,"").replace(/_/g," ").split(" ").slice(0,2).join(" ");
-            return t;
-          }).join(", ");
+          lastScene=mn.filter(p=>p.probability>0.12).map(p=>p.className.replace(/,.*$/,"").replace(/_/g," ").split(" ").slice(0,2).join(" ")).join(", ");
         }
         updatePanel(lastDets.map(d=>d.name).concat(lastScene?[lastScene]:[]));
       }
@@ -141,43 +213,51 @@ async function aiLoop(){
         if(models.pose){
           const poses=await models.pose.estimatePoses(video);
           lastPoses=poses;
-          // Calculer vitesse
           const now=Date.now();
           poses.forEach((pose,pi)=>{
             const nose=pose.keypoints.find(k=>k.name==="nose");
             if(!nose||nose.score<0.3)return;
             const key="p"+pi;
-            if(prevPositions[key]){
-              const {x:px,y:py,t:pt}=prevPositions[key];
+            if(prevPos[key]){
+              const{x:px,y:py,t:pt}=prevPos[key];
               const dx=nose.x-px,dy=nose.y-py;
-              const dist=Math.sqrt(dx*dx+dy*dy)/PIXELS_PER_METER;
+              const dist=Math.sqrt(dx*dx+dy*dy)/PX_PER_M;
               const dt=(now-pt)/1000;
-              const spd=dt>0?dist/dt:0;
-              speeds[key]={v:Math.round(spd*3.6*10)/10,x:nose.x,y:nose.y};
+              if(dt>0.05)speeds[key]={v:Math.round(dist/dt*3.6*10)/10,dx,dy,x:nose.x,y:nose.y};
             }
-            prevPositions[key]={x:nose.x,y:nose.y,t:now};
+            prevPos[key]={x:nose.x,y:nose.y,t:now};
           });
-          const labels=poses.map((_,i)=>{
-            const s=speeds["p"+i];
-            return s?`Personne ${i+1}: ${s.v} km/h`:`Personne ${i+1}`;
-          });
-          updatePanel(labels);
+          updatePanel(poses.map((_,i)=>{const s=speeds["p"+i];return s?`Personne ${i+1}: ${s.v} km/h`:`Personne ${i+1}`;}));
         }
       }
       else if(currentMode==="hands"){
         if(models.hand){
           lastHands=await models.hand.estimateHands(video);
-          updatePanel(lastHands.map((_,i)=>`Main ${i+1} détectée`));
+          updatePanel(lastHands.map((h,i)=>`Main ${i+1} (${h.handedness==="Left"?"Gauche":"Droite"})`));
         }
       }
       else if(currentMode==="face"){
         if(models.face){
-          lastFaces=await models.face.estimateFaces(video);
-          updatePanel(lastFaces.map((_,i)=>`Visage ${i+1}`));
+          lastFaceMesh=await models.face.estimateFaces(video);
+        }
+        // Reconnaissance faciale
+        if(models.faceapi&&knownFaces.length>0){
+          const dets=await faceapi.detectAllFaces(video).withFaceLandmarks().withFaceDescriptors();
+          lastFaceRec=dets.map(d=>{
+            let best=null,bestDist=Infinity;
+            for(const kf of knownFaces){
+              const dist=faceapi.euclideanDistance(d.descriptor,kf.descriptor);
+              if(dist<bestDist){bestDist=dist;best=kf;}
+            }
+            return{box:d.detection.box,name:bestDist<0.5?best.name:"Inconnu",dist:Math.round(bestDist*100)/100};
+          });
+          updatePanel(lastFaceRec.map(f=>`${f.name}${f.name!=="Inconnu"?` ✓`:""}`));
+        }else{
+          updatePanel(lastFaceMesh.map((_,i)=>`Visage ${i+1}`));
         }
       }
     }catch(e){console.error(e);}
-    await new Promise(r=>setTimeout(r,currentMode==="objects"?120:80));
+    await new Promise(r=>setTimeout(r,currentMode==="objects"?100:70));
   }
 }
 
@@ -185,25 +265,58 @@ function updatePanel(items){
   document.getElementById("info-b").textContent=`${items.length} résultat${items.length!==1?"s":""}`;
   const list=document.getElementById("det-list");
   if(!items.length){list.innerHTML='<span class="empty">Aucune détection</span>';return;}
-  list.innerHTML=items.map((n,i)=>{
-    const col=i<lastDets.length?getColor(lastDets[i].cls):"#ffa040";
-    return`<span class="chip" style="border:1px solid ${col};color:${col}">${n}</span>`;
-  }).join("");
+  list.innerHTML=items.map((n,i)=>{const col=i<lastDets.length?getColor(lastDets[i].cls):"#ffa040";return`<span class="chip" style="border:1px solid ${col};color:${col}">${n}</span>`;}).join("");
 }
 
-// ── Rendu canvas 60fps ────────────────────────────────────────────────────────
-const SKELETON=[[5,7],[7,9],[6,8],[8,10],[5,6],[11,12],[5,11],[6,12],[11,13],[13,15],[12,14],[14,16]];
-const HAND_CONNECTIONS=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[0,9],[9,10],[10,11],[11,12],[0,13],[13,14],[14,15],[15,16],[0,17],[17,18],[18,19],[19,20]];
+// ── Rendu 60fps ───────────────────────────────────────────────────────────────
+// Squelette complet avec couleurs par segment
+const SEGMENTS=[
+  {pts:[5,7,9],col:"#ff6584"},   // bras gauche
+  {pts:[6,8,10],col:"#6c63ff"},  // bras droit
+  {pts:[11,13,15],col:"#ff6584"},// jambe gauche
+  {pts:[12,14,16],col:"#6c63ff"},// jambe droite
+  {pts:[5,6],col:"#80ffb0"},     // épaules
+  {pts:[11,12],col:"#80ffb0"},   // hanches
+  {pts:[5,11],col:"#ffa040"},    // torse gauche
+  {pts:[6,12],col:"#ffa040"},    // torse droit
+  {pts:[0,5],col:"#fff"},        // cou gauche
+  {pts:[0,6],col:"#fff"},        // cou droit
+];
+
+// Connexions mains par doigt
+const FINGER_COLORS=["#ff6584","#ffa040","#f0c040","#80ffb0","#6c63ff"];
+const FINGERS=[[0,1,2,3,4],[0,5,6,7,8],[0,9,10,11,12],[0,13,14,15,16],[0,17,18,19,20]];
+
+function drawArrow(x1,y1,x2,y2,col,speed){
+  const dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy);
+  if(len<5)return;
+  const scale=Math.min(speed*8,80)/len;
+  const ex=x1+dx*scale,ey=y1+dy*scale;
+  const angle=Math.atan2(ey-y1,ex-x1);
+  const hw=18,hl=24;
+  // Corps flèche
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(ex,ey);
+  ctx.strokeStyle=col;ctx.lineWidth=8;ctx.lineCap="round";
+  ctx.shadowColor=col;ctx.shadowBlur=12;ctx.stroke();ctx.shadowBlur=0;
+  // Tête flèche
+  ctx.beginPath();
+  ctx.moveTo(ex,ey);
+  ctx.lineTo(ex-hl*Math.cos(angle-0.4),ey-hl*Math.sin(angle-0.4));
+  ctx.lineTo(ex-hl*Math.cos(angle+0.4),ey-hl*Math.sin(angle+0.4));
+  ctx.closePath();
+  ctx.fillStyle=col;ctx.shadowColor=col;ctx.shadowBlur=8;ctx.fill();ctx.shadowBlur=0;
+}
 
 function renderLoop(){
   if(!running)return;
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
+  // MODE OBJETS
   if(currentMode==="objects"){
     for(const d of lastDets){
       const{x,y,w,h,name,conf,cls}=d;
       const col=getColor(cls);
-      ctx.strokeStyle=col;ctx.lineWidth=3;ctx.shadowColor=col;ctx.shadowBlur=8;
+      ctx.strokeStyle=col;ctx.lineWidth=3;ctx.shadowColor=col;ctx.shadowBlur=10;
       ctx.strokeRect(x,y,w,h);ctx.shadowBlur=0;
       const label=`${name}  ${conf}%`;
       ctx.font="bold 15px 'Segoe UI'";
@@ -213,144 +326,157 @@ function renderLoop(){
       ctx.fillStyle="#000";ctx.fillText(label,x+6,ly-2);
     }
   }
+
+  // MODE SQUELETTE / VITESSE
   else if(currentMode==="pose"||currentMode==="speed"){
     for(let pi=0;pi<lastPoses.length;pi++){
-      const pose=lastPoses[pi];
-      const kps=pose.keypoints;
-      const col=`hsl(${(pi*60)%360},80%,65%)`;
-      // Squelette
-      ctx.strokeStyle=col;ctx.lineWidth=3;
-      for(const[a,b]of SKELETON){
-        const ka=kps[a],kb=kps[b];
-        if(!ka||!kb||ka.score<0.3||kb.score<0.3)continue;
-        ctx.beginPath();ctx.moveTo(ka.x,ka.y);ctx.lineTo(kb.x,kb.y);ctx.stroke();
+      const kps=lastPoses[pi].keypoints;
+      const personCol=`hsl(${(pi*80)%360},85%,65%)`;
+      // Segments colorés
+      for(const seg of SEGMENTS){
+        for(let i=0;i<seg.pts.length-1;i++){
+          const a=kps[seg.pts[i]],b=kps[seg.pts[i+1]];
+          if(!a||!b||a.score<0.3||b.score<0.3)continue;
+          ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
+          ctx.strokeStyle=seg.col;ctx.lineWidth=5;ctx.lineCap="round";
+          ctx.shadowColor=seg.col;ctx.shadowBlur=6;ctx.stroke();ctx.shadowBlur=0;
+        }
       }
-      // Points
+      // Points articulaires (plus gros)
       for(const kp of kps){
         if(kp.score<0.3)continue;
+        ctx.beginPath();ctx.arc(kp.x,kp.y,7,0,Math.PI*2);
+        ctx.fillStyle="#fff";ctx.fill();
         ctx.beginPath();ctx.arc(kp.x,kp.y,5,0,Math.PI*2);
-        ctx.fillStyle=col;ctx.fill();
+        ctx.fillStyle=personCol;ctx.fill();
       }
-      // Vitesse
+      // Vitesse avec flèche
       if(currentMode==="speed"){
         const s=speeds["p"+pi];
         const nose=kps.find(k=>k.name==="nose");
         if(s&&nose&&nose.score>0.3){
-          ctx.fillStyle="rgba(0,0,0,.75)";
+          drawArrow(nose.x,nose.y,nose.x+s.dx,nose.y+s.dy,"#00e676",s.v);
+          // Badge vitesse
           const label=`${s.v} km/h`;
-          ctx.font="bold 18px 'Segoe UI'";
+          ctx.font="bold 20px 'Segoe UI'";
           const tw=ctx.measureText(label).width;
-          ctx.fillRect(nose.x-tw/2-6,nose.y-45,tw+12,26);
-          ctx.fillStyle="#00e676";
-          ctx.fillText(label,nose.x-tw/2,nose.y-24);
+          ctx.fillStyle="rgba(0,0,0,.8)";ctx.fillRect(nose.x-tw/2-8,nose.y-52,tw+16,28);
+          ctx.fillStyle="#00e676";ctx.shadowColor="#00e676";ctx.shadowBlur=8;
+          ctx.fillText(label,nose.x-tw/2,nose.y-28);ctx.shadowBlur=0;
         }
       }
     }
   }
+
+  // MODE MAINS
   else if(currentMode==="hands"){
     for(const hand of lastHands){
       const kps=hand.keypoints;
-      ctx.strokeStyle="#00e676";ctx.lineWidth=2;
-      for(const[a,b]of HAND_CONNECTIONS){
-        const ka=kps[a],kb=kps[b];
-        if(!ka||!kb)continue;
-        ctx.beginPath();ctx.moveTo(ka.x,ka.y);ctx.lineTo(kb.x,kb.y);ctx.stroke();
-      }
-      for(const kp of kps){
-        ctx.beginPath();ctx.arc(kp.x,kp.y,5,0,Math.PI*2);
-        ctx.fillStyle="#00e676";ctx.fill();
-      }
+      const isLeft=hand.handedness==="Left";
+      // Chaque doigt avec sa couleur
+      FINGERS.forEach((finger,fi)=>{
+        const col=FINGER_COLORS[fi];
+        ctx.strokeStyle=col;ctx.lineWidth=4;ctx.lineCap="round";
+        ctx.shadowColor=col;ctx.shadowBlur=6;
+        ctx.beginPath();
+        finger.forEach((idx,i)=>{
+          const k=kps[idx];if(!k)return;
+          i===0?ctx.moveTo(k.x,k.y):ctx.lineTo(k.x,k.y);
+        });
+        ctx.stroke();ctx.shadowBlur=0;
+        // Points articulaires
+        finger.forEach(idx=>{
+          const k=kps[idx];if(!k)return;
+          ctx.beginPath();ctx.arc(k.x,k.y,6,0,Math.PI*2);
+          ctx.fillStyle="#fff";ctx.fill();
+          ctx.beginPath();ctx.arc(k.x,k.y,4,0,Math.PI*2);
+          ctx.fillStyle=col;ctx.fill();
+        });
+      });
+      // Label main
       const wrist=kps[0];
       if(wrist){
-        ctx.fillStyle="rgba(0,0,0,.75)";ctx.fillRect(wrist.x-30,wrist.y-28,60,20);
-        ctx.fillStyle="#00e676";ctx.font="bold 13px 'Segoe UI'";
-        ctx.fillText(hand.handedness==="Left"?"✋ Gauche":"🤚 Droite",wrist.x-27,wrist.y-12);
+        const label=isLeft?"✋ Gauche":"🤚 Droite";
+        ctx.font="bold 14px 'Segoe UI'";
+        const tw=ctx.measureText(label).width;
+        ctx.fillStyle="rgba(0,0,0,.8)";ctx.fillRect(wrist.x-tw/2-6,wrist.y-32,tw+12,22);
+        ctx.fillStyle=isLeft?"#6c63ff":"#ff6584";
+        ctx.fillText(label,wrist.x-tw/2,wrist.y-14);
       }
     }
   }
+
+  // MODE VISAGE
   else if(currentMode==="face"){
-    for(const face of lastFaces){
-      const box=face.box;
-      if(box){
-        ctx.strokeStyle="#ff6584";ctx.lineWidth=2;ctx.shadowColor="#ff6584";ctx.shadowBlur=8;
-        ctx.strokeRect(box.xMin,box.yMin,box.width,box.height);ctx.shadowBlur=0;
-        ctx.fillStyle="rgba(0,0,0,.75)";ctx.fillRect(box.xMin,box.yMin-22,80,20);
-        ctx.fillStyle="#ff6584";ctx.font="bold 13px 'Segoe UI'";
-        ctx.fillText("😊 Visage",box.xMin+4,box.yMin-6);
-      }
-      // Points du maillage (sous-échantillonnage)
+    // FaceMesh points
+    for(const face of lastFaceMesh){
       if(face.keypoints){
-        ctx.fillStyle="rgba(255,101,132,0.5)";
-        for(let i=0;i<face.keypoints.length;i+=4){
+        ctx.fillStyle="rgba(255,101,132,0.55)";
+        for(let i=0;i<face.keypoints.length;i+=3){
           const k=face.keypoints[i];
-          ctx.beginPath();ctx.arc(k.x,k.y,1.5,0,Math.PI*2);ctx.fill();
+          ctx.beginPath();ctx.arc(k.x,k.y,1.8,0,Math.PI*2);ctx.fill();
         }
       }
     }
+    // Reconnaissance faciale
+    for(const f of lastFaceRec){
+      const{xMin:bx,yMin:by,width:bw,height:bh}=f.box;
+      const col=f.name==="Inconnu"?"#aaa":"#00e676";
+      ctx.strokeStyle=col;ctx.lineWidth=3;ctx.shadowColor=col;ctx.shadowBlur=10;
+      ctx.strokeRect(bx,by,bw,bh);ctx.shadowBlur=0;
+      ctx.font="bold 16px 'Segoe UI'";
+      const tw=ctx.measureText(f.name).width;
+      ctx.fillStyle=col;ctx.fillRect(bx-1,by-24,tw+14,22);
+      ctx.fillStyle="#000";ctx.fillText(f.name,bx+6,by-6);
+    }
   }
 
-  // FPS
   frameCount++;const now=Date.now();
-  if(now-lastT>=1000){
-    document.getElementById("fps-b").textContent=`⚡ ${Math.round(frameCount*1000/(now-lastT))} FPS`;
-    frameCount=0;lastT=now;
-  }
+  if(now-lastT>=1000){document.getElementById("fps-b").textContent=`⚡ ${Math.round(frameCount*1000/(now-lastT))} FPS`;frameCount=0;lastT=now;}
   requestAnimationFrame(renderLoop);
 }
 
-// ── Chargement modèles ────────────────────────────────────────────────────────
-async function loadModels(){
-  const msg=document.getElementById("load-msg");
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init(){
+  video=document.getElementById("video");canvas=document.getElementById("canvas");ctx=canvas.getContext("2d");
+  loadKnownFaces();
 
-  msg.textContent="Caméra...";
+  document.getElementById("load-msg").textContent="Démarrage caméra...";
   await startCam();
 
-  msg.textContent="YOLO objets (1/5)...";
+  document.getElementById("load-msg").textContent="YOLO objets...";
   models.coco=await cocoSsd.load({base:"lite_mobilenet_v2"});
 
-  msg.textContent="MobileNet 1000 classes (2/5)...";
+  document.getElementById("load-msg").textContent="MobileNet 1000 classes...";
   models.mn=await mobilenet.load({version:2,alpha:1.0});
 
-  msg.textContent="MoveNet squelette/vitesse (3/5)...";
-  try{
-    models.pose=await poseDetection.createDetector(
-      poseDetection.SupportedModels.MoveNet,
-      {modelType:poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING}
-    );
-  }catch(e){console.warn("MoveNet indispo:",e);}
+  document.getElementById("load-msg").textContent="MoveNet corps/vitesse...";
+  try{models.pose=await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet,{modelType:poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING});}catch(e){console.warn(e);}
 
-  msg.textContent="HandPose mains (4/5)...";
-  try{
-    models.hand=await handPoseDetection.createDetector(
-      handPoseDetection.SupportedModels.MediaPipeHands,
-      {runtime:"tfjs",modelType:"lite"}
-    );
-  }catch(e){console.warn("HandPose indispo:",e);}
+  document.getElementById("load-msg").textContent="HandPose mains...";
+  try{models.hand=await handPoseDetection.createDetector(handPoseDetection.SupportedModels.MediaPipeHands,{runtime:"tfjs",modelType:"lite"});}catch(e){console.warn(e);}
 
-  msg.textContent="FaceMesh visage (5/5)...";
-  try{
-    models.face=await faceLandmarksDetection.createDetector(
-      faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh,
-      {runtime:"tfjs",refineLandmarks:false}
-    );
-  }catch(e){console.warn("FaceMesh indispo:",e);}
-}
+  document.getElementById("load-msg").textContent="FaceMesh visage...";
+  try{models.face=await faceLandmarksDetection.createDetector(faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh,{runtime:"tfjs",refineLandmarks:false});}catch(e){console.warn(e);}
 
-async function init(){
-  video=document.getElementById("video");
-  canvas=document.getElementById("canvas");
-  ctx=canvas.getContext("2d");
-  await loadModels();
+  document.getElementById("load-msg").textContent="Face-API reconnaissance...";
+  try{
+    const BASE="https://cdn.jsdelivr.net/npm/face-api.js/weights/";
+    await Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri(BASE),
+      faceapi.nets.faceLandmark68TinyNet.loadFromUri(BASE),
+      faceapi.nets.faceRecognitionNet.loadFromUri(BASE),
+    ]);
+    models.faceapi=true;
+  }catch(e){console.warn("face-api:",e);}
+
   document.getElementById("loading").style.display="none";
   running=true;
   aiLoop();
   requestAnimationFrame(renderLoop);
 }
 
-init().catch(e=>{
-  document.getElementById("load-msg").textContent="Erreur: "+e.message;
-  console.error(e);
-});
+init().catch(e=>{document.getElementById("load-msg").textContent="Erreur: "+e.message;console.error(e);});
 </script>
 </body>
 </html>
