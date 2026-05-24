@@ -169,16 +169,16 @@ function matchFace(desc){
 // Auto-prompt enregistrement
 function maybeSaveNewFace(descriptor,box){
   if(promptOpen||!models.faceapi)return;
-  const key=Math.round(box.xMin/50)+","+Math.round(box.yMin/50);
+  const bx=box.x||box.left||box.xMin||0, by=box.y||box.top||box.yMin||0;
+  const key=Math.round(bx/50)+","+Math.round(by/50);
   if(!facePresence[key])facePresence[key]={count:0,descriptor,box};
   facePresence[key].count++;
   if(facePresence[key].count===PRESENCE_THRESHOLD){
-    // Capturer le visage
     const tmp=document.createElement("canvas");
-    const pad=20;
-    tmp.width=box.width+pad*2;tmp.height=box.height+pad*2;
+    const pad=20, bw=box.width||80, bh=box.height||80;
+    tmp.width=bw+pad*2;tmp.height=bh+pad*2;
     const tc=tmp.getContext("2d");
-    tc.drawImage(video,box.xMin-pad,box.yMin-pad,tmp.width,tmp.height,0,0,tmp.width,tmp.height);
+    tc.drawImage(video,bx-pad,by-pad,tmp.width,tmp.height,0,0,tmp.width,tmp.height);
     pendingFace={descriptor,imgUrl:tmp.toDataURL("image/jpeg",0.85)};
     document.getElementById("face-snap").src=pendingFace.imgUrl;
     document.getElementById("name-input").value="";
@@ -391,26 +391,41 @@ function renderLoop(){
   // MAINS
   else if(currentMode==="hands"){
     for(const hand of lastHands){
-      const kps=hand.keypoints;
-      const isLeft=hand.handedness==="Left";
-      // Chaque doigt
+      // HandPose retourne keypoints ET keypoints3D — on utilise keypoints (2D)
+      const kps=hand.keypoints||hand.landmarks||[];
+      if(!kps.length)continue;
+      const isLeft=(hand.handedness||"Right")==="Left";
+      const score=hand.score||1;
+      // Dessiner chaque doigt
       FINGER_SEGS.forEach((finger,fi)=>{
         const col=FINGER_COLS[fi];
         ctx.strokeStyle=col;ctx.lineWidth=5;ctx.lineCap="round";
         ctx.shadowColor=col;ctx.shadowBlur=7;
-        for(let i=0;i<finger.length-1;i++){
-          const a=kps[finger[i]],b=kps[finger[i+1]];
-          if(!a||!b)continue;
-          ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+        // Tracer le doigt en continu
+        ctx.beginPath();
+        let started=false;
+        for(const idx of finger){
+          const k=kps[idx];if(!k)continue;
+          if(!started){ctx.moveTo(k.x,k.y);started=true;}
+          else ctx.lineTo(k.x,k.y);
         }
-        ctx.shadowBlur=0;
+        ctx.stroke();ctx.shadowBlur=0;
         // Points articulaires
-        finger.forEach(idx=>{
-          const k=kps[idx];if(!k)return;
+        for(const idx of finger){
+          const k=kps[idx];if(!k)continue;
           ctx.beginPath();ctx.arc(k.x,k.y,7,0,Math.PI*2);ctx.fillStyle="#fff";ctx.fill();
           ctx.beginPath();ctx.arc(k.x,k.y,5,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();
-        });
+        }
       });
+      // Paume (connexion entre base des doigts)
+      const palmIdx=[0,5,9,13,17,0];
+      ctx.strokeStyle="rgba(255,255,255,0.4)";ctx.lineWidth=3;
+      ctx.beginPath();
+      palmIdx.forEach((idx,i)=>{
+        const k=kps[idx];if(!k)return;
+        i===0?ctx.moveTo(k.x,k.y):ctx.lineTo(k.x,k.y);
+      });
+      ctx.stroke();
       // Label
       const wrist=kps[0];
       if(wrist){
@@ -439,14 +454,16 @@ function renderLoop(){
     // Rectangles + noms (reconnaissance)
     for(const f of lastFaceRec){
       const b=f.box;
+      // face-api box: {x,y,width,height} ou {left,top,width,height}
+      const bx=b.x||b.left||0, by=b.y||b.top||0, bw=b.width||80, bh=b.height||80;
       const col=f.name?"#00e676":"rgba(255,255,255,0.4)";
       ctx.strokeStyle=col;ctx.lineWidth=3;ctx.shadowColor=col;ctx.shadowBlur=8;
-      ctx.strokeRect(b.x,b.y,b.width,b.height);ctx.shadowBlur=0;
+      ctx.strokeRect(bx,by,bw,bh);ctx.shadowBlur=0;
       if(f.name){
         ctx.font="bold 17px 'Segoe UI'";
         const tw=ctx.measureText(f.name).width;
-        ctx.fillStyle="#00e676";ctx.fillRect(b.x-1,b.y-24,tw+14,22);
-        ctx.fillStyle="#000";ctx.fillText(f.name,b.x+6,b.y-6);
+        ctx.fillStyle="#00e676";ctx.fillRect(bx-1,by-24,tw+14,22);
+        ctx.fillStyle="#000";ctx.fillText(f.name,bx+6,by-6);
       }
     }
   }
